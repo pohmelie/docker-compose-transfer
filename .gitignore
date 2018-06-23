@@ -1,0 +1,4 @@
+*.pyc
+*.tar
+*.yml
+*.egg-info
