@@ -2,3 +2,5 @@
 *.tar
 *.yml
 *.egg-info
+build/
+dist/
