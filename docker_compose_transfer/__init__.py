@@ -9,10 +9,10 @@ import yaml
 import tqdm
 
 
-version = "0.0.3"
+version = "0.0.4"
 
 
-def save(file, client, image, print):
+def save(args, client, image, print):
     real_images = client.images.list(image)
     if not real_images:
         print(f"{image}: missed (pull or build image)")
@@ -23,15 +23,16 @@ def save(file, client, image, print):
         sys.exit(1)
     print(f"{image} saving...")
     escaped = urllib.parse.quote(image, safe="")
-    with (file.parent / f"{escaped}.tar").open("wb") as f:
+    args.output.mkdir(parents=True, exist_ok=True)
+    with (args.output / f"{escaped}.tar").open("wb") as f:
         for chunk in real_images[0].save():
             f.write(chunk)
 
 
-def load(file, client, image, print):
+def load(args, client, image, print):
     print(f"{image} loading...")
     escaped = urllib.parse.quote(image, safe="")
-    with (file.parent / f"{escaped}.tar").open("rb") as f:
+    with (args.input / f"{escaped}.tar").open("rb") as f:
         i, *_ = client.images.load(f)
         i.tag(image)
 
@@ -43,8 +44,14 @@ def parse_args():
                         help="specify an alternate compose file [default: %(default)s]")
     sub_commands = parser.add_subparsers(dest="command")
     sub_commands.required = True
-    sub_commands.add_parser("save").set_defaults(function=save)
-    sub_commands.add_parser("load").set_defaults(function=load)
+    p = sub_commands.add_parser("save")
+    p.set_defaults(function=save)
+    p.add_argument("-o", "--output", type=pathlib.Path, default=".",
+                   help="output directory [default: %(default)s]")
+    p = sub_commands.add_parser("load")
+    p.set_defaults(function=load)
+    p.add_argument("-i", "--input", type=pathlib.Path, default=".",
+                   help="input directory [default: %(default)s]")
     return parser.parse_args()
 
 
@@ -65,5 +72,5 @@ def main():
     config_images = list(gen_images_list(args.file))
     with tqdm.tqdm(total=len(config_images)) as pbar:
         for image in config_images:
-            args.function(args.file, client, image, print=pbar.write)
+            args.function(args, client, image, print=pbar.write)
             pbar.update(1)
