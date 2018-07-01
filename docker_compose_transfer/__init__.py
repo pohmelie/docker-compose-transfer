@@ -9,7 +9,7 @@ import yaml
 import tqdm
 
 
-version = "0.0.4"
+version = "0.0.5"
 
 
 def save(args, client, image, print):
@@ -39,7 +39,7 @@ def load(args, client, image, print):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-v", "--version", default=False, action="store_true", help="show version")
+    parser.add_argument("--version", default=False, action="store_true", help="show version")
     parser.add_argument("-f", "--file", default="docker-compose.yml", type=pathlib.Path,
                         help="specify an alternate compose file [default: %(default)s]")
     sub_commands = parser.add_subparsers(dest="command")
