@@ -9,7 +9,7 @@ import yaml
 import tqdm
 
 
-version = "0.0.5"
+version = "0.1.0"
 
 
 def save(args, client, image, print):
@@ -21,10 +21,14 @@ def save(args, client, image, print):
         names = ", ".join(set(itertools.chain.from_iterable(i.tags for i in real_images)))
         print(f"{image}: specify image name more precisely (candidates: {names})")
         sys.exit(1)
-    print(f"{image} saving...")
     escaped = urllib.parse.quote(image, safe="")
+    path = args.output / f"{escaped}.tar"
+    if path.exists() and not args.overwrite:
+        print(f"{image} skip ({path} already exists)")
+        return
+    print(f"{image} saving...")
     args.output.mkdir(parents=True, exist_ok=True)
-    with (args.output / f"{escaped}.tar").open("wb") as f:
+    with path.open("wb") as f:
         for chunk in real_images[0].save():
             f.write(chunk)
 
@@ -48,6 +52,8 @@ def parse_args():
     p.set_defaults(function=save)
     p.add_argument("-o", "--output", type=pathlib.Path, default=".",
                    help="output directory [default: %(default)s]")
+    p.add_argument("--overwrite", action="store_true", default=False,
+                   help="overwrite if exist [default: %(default)s]")
     p = sub_commands.add_parser("load")
     p.set_defaults(function=load)
     p.add_argument("-i", "--input", type=pathlib.Path, default=".",
