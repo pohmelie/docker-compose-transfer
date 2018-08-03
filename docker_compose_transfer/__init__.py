@@ -9,7 +9,7 @@ import yaml
 import tqdm
 
 
-version = "0.1.0"
+version = "0.2.0"
 
 
 def save(args, client, image, print):
@@ -44,6 +44,7 @@ def load(args, client, image, print):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--version", default=False, action="store_true", help="show version")
+    parser.add_argument("--timeout", default=60.0, type=float, help="docker connection timeout [default: %(default)s]")
     parser.add_argument("-f", "--file", default="docker-compose.yml", type=pathlib.Path,
                         help="specify an alternate compose file [default: %(default)s]")
     sub_commands = parser.add_subparsers(dest="command")
@@ -74,7 +75,7 @@ def main():
     if args.version:
         print(version)
         return
-    client = docker.from_env()
+    client = docker.from_env(timeout=args.timeout)
     config_images = list(gen_images_list(args.file))
     with tqdm.tqdm(total=len(config_images)) as pbar:
         for image in config_images:
