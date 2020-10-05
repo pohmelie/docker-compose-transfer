@@ -1,18 +1,18 @@
 import argparse
 import pathlib
 import itertools
-import urllib
 import sys
 
 import docker
-import yaml
 import tqdm
+from compose import config
 
 
-version = "0.3.0"
+version = "0.4.0"
 
 
-def save(args, client, image, print):
+def save(args, client, service, print):
+    image = service["image"]
     real_images = client.images.list(image)
     if not real_images:
         print(f"{image}: missed (pull or build image)")
@@ -21,8 +21,7 @@ def save(args, client, image, print):
         names = ", ".join(set(itertools.chain.from_iterable(i.tags for i in real_images)))
         print(f"{image}: specify image name more precisely (candidates: {names})")
         sys.exit(1)
-    escaped = urllib.parse.quote(image, safe="")
-    path = args.output / f"{escaped}.tar"
+    path = args.output / f"{service['name']}.tar"
     if path.exists() and not args.overwrite:
         print(f"{image} skip ({path} already exists)")
         return
@@ -33,12 +32,11 @@ def save(args, client, image, print):
             f.write(chunk)
 
 
-def load(args, client, image, print):
-    print(f"{image} loading...")
-    escaped = urllib.parse.quote(image, safe="")
-    with (args.input / f"{escaped}.tar").open("rb") as f:
+def load(args, client, service, print):
+    print(f"{service['image']} loading...")
+    with (args.input / f"{service['name']}.tar").open("rb") as f:
         i, *_ = client.images.load(f)
-        i.tag(image)
+        i.tag(service['image'])
 
 
 def parse_args():
@@ -62,12 +60,14 @@ def parse_args():
     return parser.parse_args()
 
 
-def gen_images_list(path):
-    compose = yaml.load(path.read_text())
-    for name, config in compose["services"].items():
-        if "image" not in config:
-            raise RuntimeError(f"Service {name!r} have no 'image' field")
-        yield config["image"]
+def gen_services(path):
+    env = config.environment.Environment.from_env_file(path.parent)
+    details = config.find(path.parent, [path.name], env)
+    resolved = config.load(details)
+    for s in resolved.services:
+        if "image" not in s:
+            raise RuntimeError(f"Service {s['name']!r} have no 'image' field")
+        yield s
 
 
 def main():
@@ -75,9 +75,12 @@ def main():
     if args.version:
         print(version)
         return
+    services = list(gen_services(args.file.resolve()))
     client = docker.from_env(timeout=args.timeout)
-    config_images = list(gen_images_list(args.file))
-    with tqdm.tqdm(total=len(config_images)) as pbar:
-        for image in config_images:
-            args.function(args, client, image, print=pbar.write)
+    viewed = set()
+    with tqdm.tqdm(total=len(services)) as pbar:
+        for service in services:
+            if service["image"] not in viewed:
+                args.function(args, client, service, print=pbar.write)
+            viewed.add(service["image"])
             pbar.update(1)
