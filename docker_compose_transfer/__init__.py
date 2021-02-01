@@ -8,7 +8,7 @@ import tqdm
 from compose import config
 
 
-version = "0.4.0"
+version = "0.5.0"
 
 
 def save(args, client, service, print):
@@ -93,6 +93,7 @@ def main():
     client = docker.from_env(timeout=args.timeout)
     viewed = set()
     with tqdm.tqdm(total=len(services)) as pbar:
+        services.sort(key=lambda s: s["name"])
         for service in services:
             if service["image"] not in viewed:
                 args.function(args, client, service, print=pbar.write)
