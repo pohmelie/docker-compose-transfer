@@ -15,17 +15,17 @@ def save(args, client, service, print):
     image = service["image"]
     real_images = client.images.list(image)
     if not real_images:
-        print(f"{image}: missed (pull or build image)")
+        print("{}: missed (pull or build image)".format(image))
         sys.exit(1)
     if len(real_images) > 1:
         names = ", ".join(set(itertools.chain.from_iterable(i.tags for i in real_images)))
-        print(f"{image}: specify image name more precisely (candidates: {names})")
+        print("{}: specify image name more precisely (candidates: {})".format(image, names))
         sys.exit(1)
-    path = args.output / f"{service['name']}.tar"
+    path = args.output / "{}.tar".format(service["name"])
     if path.exists() and not args.overwrite:
-        print(f"{image} skip ({path} already exists)")
+        print("{} skip ({} already exists)".format(image, path))
         return
-    print(f"{image} saving...")
+    print("{} saving...".format(image))
     args.output.mkdir(parents=True, exist_ok=True)
     with path.open("wb") as f:
         for chunk in real_images[0].save():
@@ -33,8 +33,9 @@ def save(args, client, service, print):
 
 
 def load(args, client, service, print):
-    print(f"{service['image']} loading...")
-    with (args.input / f"{service['name']}.tar").open("rb") as f:
+    print("{} loading...".format(service["image"]))
+    path = args.input / "{}.tar".format(service["name"])
+    with path.open("rb") as f:
         i, *_ = client.images.load(f)
         i.tag(service['image'])
 
@@ -43,8 +44,8 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--version", default=False, action="store_true", help="show version")
     parser.add_argument("--timeout", default=60, type=int, help="docker connection timeout [default: %(default)s]")
-    parser.add_argument("-f", "--file", default="docker-compose.yml", type=pathlib.Path,
-                        help="specify an alternate compose file [default: %(default)s]")
+    parser.add_argument("-f", "--file", default=None, type=pathlib.Path,
+                        help="specify an alternate compose file")
     sub_commands = parser.add_subparsers(dest="command")
     sub_commands.required = True
     p = sub_commands.add_parser("save")
@@ -61,12 +62,13 @@ def parse_args():
 
 
 def gen_services(path):
-    env = config.environment.Environment.from_env_file(path.parent)
-    details = config.find(path.parent, [path.name], env)
+    parent = str(path.parent)
+    env = config.environment.Environment.from_env_file(parent)
+    details = config.find(parent, [path.name], env)
     resolved = config.load(details)
     for s in resolved.services:
         if "image" not in s:
-            raise RuntimeError(f"Service {s['name']!r} have no 'image' field")
+            raise RuntimeError("Service {!r} have no 'image' field".format(s["name"]))
         yield s
 
 
@@ -75,7 +77,19 @@ def main():
     if args.version:
         print(version)
         return
-    services = list(gen_services(args.file.resolve()))
+    if args.file is None:
+        files = ["docker-compose.yml", "docker-compose.yaml"]
+    else:
+        files = [args.file]
+    for file in files:
+        path = pathlib.Path(file)
+        if not path.exists():
+            continue
+        path = path.resolve()
+        services = list(gen_services(path))
+        break
+    else:
+        raise RuntimeError("Files does not exists {!r}".format(files))
     client = docker.from_env(timeout=args.timeout)
     viewed = set()
     with tqdm.tqdm(total=len(services)) as pbar:

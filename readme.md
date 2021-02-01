@@ -7,7 +7,7 @@ python -m pip install docker-compose-transfer
 ```
 
 ## Requirements
-* python 3.6+
+* python 3.5+
 * docker
 
 ## License
@@ -27,6 +27,5 @@ optional arguments:
   -h, --help            show this help message and exit
   --version             show version
   --timeout TIMEOUT     docker connection timeout [default: 60.0]
-  -f FILE, --file FILE  specify an alternate compose file [default: docker-
-                        compose.yml]
+  -f FILE, --file FILE  specify an alternate compose file
 ```
