@@ -17,7 +17,9 @@ python -m pip install docker-compose-transfer
 
 ``` bash
 $ docker-compose-transfer --help
-usage: docker-compose-transfer [-h] [--version] [--timeout TIMEOUT] [-f FILE]
+usage: docker-compose-transfer [-h] [--version] [--timeout TIMEOUT]
+                               [--use-service-image-name-as-filename]
+                               [-f FILE]
                                {save,load} ...
 
 positional arguments:
@@ -26,6 +28,8 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   --version             show version
-  --timeout TIMEOUT     docker connection timeout [default: 60.0]
+  --timeout TIMEOUT     docker connection timeout [default: 60]
+  --use-service-image-name-as-filename
+                        Support legacy naming behavior
   -f FILE, --file FILE  specify an alternate compose file
 ```

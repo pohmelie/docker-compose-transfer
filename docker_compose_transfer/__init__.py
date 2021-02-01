@@ -2,6 +2,7 @@ import argparse
 import pathlib
 import itertools
 import sys
+import urllib
 
 import docker
 import tqdm
@@ -9,6 +10,12 @@ from compose import config
 
 
 version = "0.5.0"
+
+
+def _resolve_name(args, service):
+    if args.use_service_image_name_as_filename:
+        return urllib.parse.quote(service["image"], safe="")
+    return service["name"]
 
 
 def save(args, client, service, print):
@@ -21,7 +28,7 @@ def save(args, client, service, print):
         names = ", ".join(set(itertools.chain.from_iterable(i.tags for i in real_images)))
         print("{}: specify image name more precisely (candidates: {})".format(image, names))
         sys.exit(1)
-    path = args.output / "{}.tar".format(service["name"])
+    path = args.output / "{}.tar".format(_resolve_name(args, service))
     if path.exists() and not args.overwrite:
         print("{} skip ({} already exists)".format(image, path))
         return
@@ -34,16 +41,18 @@ def save(args, client, service, print):
 
 def load(args, client, service, print):
     print("{} loading...".format(service["image"]))
-    path = args.input / "{}.tar".format(service["name"])
+    path = args.input / "{}.tar".format(_resolve_name(args, service))
     with path.open("rb") as f:
         i, *_ = client.images.load(f)
-        i.tag(service['image'])
+        i.tag(service["image"])
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--version", default=False, action="store_true", help="show version")
     parser.add_argument("--timeout", default=60, type=int, help="docker connection timeout [default: %(default)s]")
+    parser.add_argument("--use-service-image-name-as-filename", default=False, action="store_true",
+                        help="Support legacy naming behavior")
     parser.add_argument("-f", "--file", default=None, type=pathlib.Path,
                         help="specify an alternate compose file")
     sub_commands = parser.add_subparsers(dest="command")
