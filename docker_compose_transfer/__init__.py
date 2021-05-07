@@ -9,7 +9,7 @@ import tqdm
 from compose import config
 
 
-version = "0.6.0"
+version = "0.7.0"
 
 
 def _resolve_name(args, service):
