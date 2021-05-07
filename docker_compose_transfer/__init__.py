@@ -20,9 +20,9 @@ def _resolve_name(args, service):
 
 def save(args, client, service, print):
     image = service["image"]
-    real_images = client.images.list(image)
+    real_images = [i for i in client.images.list() if image in i.tags]
     if not real_images:
-        print("{}: missed (pull or build image)".format(image))
+        print("{}: missed (pull, build or specify precisely image name)".format(image))
         sys.exit(1)
     if len(real_images) > 1:
         names = ", ".join(set(itertools.chain.from_iterable(i.tags for i in real_images)))
